@@ -1,0 +1,10 @@
+<include>
+  <context name="pbxpro_internal">
+    <extension name="tenant_internal_extension">
+      <condition field="destination_number" expression="^(\d{2,16})$">
+        <action application="set" data="hangup_after_bridge=true"/>
+        <action application="bridge" data="user/$1@${domain_name}"/>
+      </condition>
+    </extension>
+  </context>
+</include>
