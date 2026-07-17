@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsureTenantActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([__DIR__.'/../app/Console/Commands'])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
-        $middleware->alias(['role' => EnsureRole::class]);
+        $middleware->alias(['role' => EnsureRole::class, 'tenant.active' => EnsureTenantActive::class]);
         $middleware->trustProxies(at: '*');
         $middleware->validateCsrfTokens(except: ['freeswitch/xml/*']);
     })

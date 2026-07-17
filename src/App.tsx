@@ -3,10 +3,12 @@ import {
   Activity, Bell, Building2, CalendarDays, ChevronDown, CircleDot, Clock3,
   ContactRound, Download, FileAudio, FileClock, Gauge, Globe2, Grid2X2,
   Headphones, HeartPulse, History, LayoutDashboard, ListChecks, Menu, MessageSquareText,
-  Mic, MicOff, Moon, Network, Pause, Phone, PhoneCall, PhoneForwarded,
+  LogOut, Mic, MicOff, Moon, Network, Pause, Phone, PhoneCall, PhoneForwarded,
   PhoneIncoming, PhoneOff, PhoneOutgoing, Plus, Radio, Search, Server,
   Settings, ShieldCheck, Sparkles, Users, UsersRound, Voicemail, X, type LucideIcon,
 } from 'lucide-react'
+import { TenantsPage } from './features/tenants/TenantsPage'
+import { api, type DashboardSummary } from './lib/api'
 
 export type Role = 'super' | 'tenant' | 'agent'
 type NavItem = { label: string; icon: LucideIcon }
@@ -76,13 +78,13 @@ function Sidebar({ role, active, onNavigate, collapsed, onClose }: { role: Role;
   </aside>
 }
 
-function Topbar({ role, setRole, onMenu, canSwitchRole }: { role: Role; setRole: (role: Role) => void; onMenu: () => void; canSwitchRole: boolean }) {
+function Topbar({ role, setRole, onMenu, canSwitchRole, onLogout }: { role: Role; setRole: (role: Role) => void; onMenu: () => void; canSwitchRole: boolean; onLogout?: () => void }) {
   const [open, setOpen] = useState(false)
   return <header className="topbar">
     <button className="icon-btn menu-toggle" onClick={onMenu}><Menu size={20}/></button>
     <button className="tenant-select"><Building2 size={16}/> {role === 'super' ? 'All Tenants' : 'ABC Finance'} <ChevronDown size={15}/></button>
     <label className="search"><Search size={18}/><input aria-label="Search" placeholder="Search agents, calls, tenants..."/><kbd>/</kbd></label>
-    <div className="top-actions"><button className="icon-btn"><Moon size={19}/></button><button className="icon-btn notification"><Bell size={19}/><b>12</b></button><button className="icon-btn globe"><Globe2 size={19}/></button>
+    <div className="top-actions"><button className="icon-btn"><Moon size={19}/></button><button className="icon-btn notification"><Bell size={19}/><b>12</b></button><button className="icon-btn globe"><Globe2 size={19}/></button>{onLogout && <button className="icon-btn" aria-label="Sign out" title="Sign out" onClick={onLogout}><LogOut size={18}/></button>}
       <div className="role-wrap"><button className="role-picker" onClick={() => canSwitchRole && setOpen(!open)}><span>{roleMeta[role].initials}</span><div><strong>{roleMeta[role].label}</strong><small>{roleMeta[role].subtitle}</small></div>{canSwitchRole && <ChevronDown size={15}/>}</button>
         {canSwitchRole && open && <div className="role-menu">{(['super', 'tenant', 'agent'] as Role[]).map(r => <button key={r} className={role === r ? 'selected' : ''} onClick={() => { setRole(r); setOpen(false) }}><span>{roleMeta[r].initials}</span><div><strong>{roleMeta[r].label}</strong><small>{roleMeta[r].subtitle}</small></div></button>)}</div>}
       </div>
@@ -137,12 +139,27 @@ function ActiveCalls() {
   return <section className="card active-calls"><div className="card-title"><h3>Active Calls</h3><button>View all</button></div>{agents.slice(0,5).map((a,i) => <div className="active-row" key={a[1]}><span className="call-type in"><PhoneCall size={16}/></span><div><strong>{i % 2 ? '+1 202-555-0187' : a[1]}</strong><small>{a[0]}</small></div><span className="duration">● 00:{i*2+3}:1{i}</span></div>)}<button className="monitor"><Headphones size={16}/> Go to Live Monitor</button></section>
 }
 
-function Dashboard({ role }: { role: 'super' | 'tenant' }) {
-  return <div className="dashboard-grid"><div className="metric-grid">{metrics[role].map((m) => <MetricCard key={m[0]} item={m}/>)}</div>
+function Dashboard({ role, onNavigate }: { role: 'super' | 'tenant'; onNavigate: (page:string)=>void }) {
+  const [summary,setSummary]=useState<DashboardSummary|null>(null)
+  useEffect(()=>{ let active=true; api.dashboard().then(response=>{if(active)setSummary(response.data)}).catch(()=>{}); return()=>{active=false} },[role])
+  const dashboardMetrics = summary ? role === 'super' ? [
+    ['Total Tenants',summary.tenants.toLocaleString(),`${summary.tenants} onboarded`,Building2,'violet'],
+    ['Total Extensions',summary.extensions.toLocaleString(),'Provisioned extensions',Phone,'green'],
+    ['Total Agents',summary.agents.toLocaleString(),'Provisioned agents',Headphones,'blue'],
+    ['Active Calls',summary.active_calls.toLocaleString(),'Live platform calls',Activity,'orange'],
+    ['Calls Today',summary.calls_today.toLocaleString(),'Since midnight',PhoneCall,'purple'],
+  ] as const : [
+    ['Extensions',summary.extensions.toLocaleString(),'Provisioned extensions',Phone,'violet'],
+    ['Agents',summary.agents.toLocaleString(),'Provisioned agents',Headphones,'green'],
+    ['Active Calls',summary.active_calls.toLocaleString(),'Live tenant calls',Activity,'blue'],
+    ['Calls Today',summary.calls_today.toLocaleString(),'Since midnight',PhoneCall,'orange'],
+    ['Tenants','1','Current workspace',Building2,'purple'],
+  ] as const : metrics[role]
+  return <div className="dashboard-grid"><div className="metric-grid">{dashboardMetrics.map((m) => <MetricCard key={m[0]} item={m}/>)}</div>
     <section className="card chart-card"><div className="card-title"><h3>Call Statistics</h3><button className="select-btn">This Week <ChevronDown size={14}/></button></div><LineChart/></section>
     <section className="card distribution-card"><div className="card-title"><h3>Call Distribution</h3></div><Distribution/></section>
     <LiveAgents/><MiniTenants role={role}/><RecentCalls/><SystemHealth/><ActiveCalls/>
-    <section className="quick-access"><h3>Quick Access</h3><div>{(role === 'super' ? [[Plus,'Add Tenant'],[Users,'Add Admin'],[Server,'PBX Server'],[Activity,'Usage Report'],[ShieldCheck,'Audit Logs'],[Settings,'Settings']] : [[Phone,'Add Extension'],[Users,'Add Agent'],[Headphones,'Create Queue'],[Network,'Create IVR'],[PhoneIncoming,'Add DID'],[PhoneOutgoing,'Campaign'],[Activity,'Reports'],[Settings,'Settings']]).map(([Icon,label]) => { const I = Icon as LucideIcon; return <button key={label as string}><span><I size={21}/></span>{label as string}</button>})}</div></section>
+    <section className="quick-access"><h3>Quick Access</h3><div>{(role === 'super' ? [[Plus,'Add Tenant'],[Users,'Add Admin'],[Server,'PBX Server'],[Activity,'Usage Report'],[ShieldCheck,'Audit Logs'],[Settings,'Settings']] : [[Phone,'Add Extension'],[Users,'Add Agent'],[Headphones,'Create Queue'],[Network,'Create IVR'],[PhoneIncoming,'Add DID'],[PhoneOutgoing,'Campaign'],[Activity,'Reports'],[Settings,'Settings']]).map(([Icon,label]) => { const I = Icon as LucideIcon; return <button key={label as string} onClick={()=>label === 'Add Tenant' && onNavigate('Tenants')}><span><I size={21}/></span>{label as string}</button>})}</div></section>
   </div>
 }
 
@@ -182,13 +199,13 @@ function GenericPage({ title, role }: { title: string; role: Role }) {
   return <div className="generic-page"><div className="generic-toolbar"><label className="search"><Search size={17}/><input placeholder={`Search ${title.toLowerCase()}...`}/></label><button className="primary-button"><Plus size={17}/> Add {title.replace(/s$/, '')}</button></div><section className="card data-table"><div className="table-head"><span>Name</span><span>Status</span><span>Tenant</span><span>Updated</span><span/></div>{rows.map((name,i) => <div className="table-row" key={name}><span><i className={`table-icon t${i}`}><CircleDot size={16}/></i><strong>{name}</strong><small>{title} #{1040+i}</small></span><span><b className={i === 4 ? 'badge paused' : 'badge'}>{i === 4 ? 'Paused' : 'Active'}</b></span><span>{role === 'super' ? ['ABC Finance','Tech Solutions','Global Mart','Health Plus','Edu Center'][i] : 'ABC Finance'}</span><span>{i+1} hour{i ? 's' : ''} ago</span><span>•••</span></div>)}</section></div>
 }
 
-export default function App({ lockedRole }: { lockedRole?: Role }) {
+export default function App({ lockedRole, onLogout }: { lockedRole?: Role; onLogout?: () => void }) {
   const [role, setRoleState] = useState<Role>(() => lockedRole || (localStorage.getItem('pbx-role') as Role) || 'super')
   const [active, setActive] = useState(role === 'agent' ? 'Workspace' : 'Dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const setRole = (r: Role) => { setRoleState(r); localStorage.setItem('pbx-role', r); setActive(r === 'agent' ? 'Workspace' : 'Dashboard') }
   const isDashboard = active === 'Dashboard'
-  return <div className="app-shell"><Sidebar role={role} active={active} onNavigate={setActive} collapsed={sidebarOpen} onClose={() => setSidebarOpen(false)}/><div className="main-shell"><Topbar role={role} setRole={setRole} onMenu={() => setSidebarOpen(true)} canSwitchRole={!lockedRole}/><main>
+  return <div className="app-shell"><Sidebar role={role} active={active} onNavigate={setActive} collapsed={sidebarOpen} onClose={() => setSidebarOpen(false)}/><div className="main-shell"><Topbar role={role} setRole={setRole} onMenu={() => setSidebarOpen(true)} canSwitchRole={!lockedRole} onLogout={onLogout}/><main>
     <div className="page-heading"><div><h1>{active}</h1><p>{isDashboard ? role === 'super' ? 'Platform-wide performance and system overview' : 'Today’s contact-center performance at a glance' : active === 'Workspace' ? 'Manage conversations and customer outcomes' : `Manage ${active.toLowerCase()} for ${role === 'super' ? 'the platform' : 'ABC Finance'}`}</p></div>{(isDashboard || active === 'Workspace') && <div className="heading-actions"><button className="date-button"><CalendarDays size={16}/> Jul 7, 2026 – Jul 13, 2026</button><button className="export-button"><Download size={16}/> Export</button></div>}</div>
-    {role === 'agent' && active === 'Workspace' ? <AgentWorkspace/> : isDashboard && role !== 'agent' ? <Dashboard role={role}/> : <GenericPage title={active} role={role}/>}</main></div>{sidebarOpen && <div className="scrim" onClick={() => setSidebarOpen(false)}/>}</div>
+    {role === 'super' && active === 'Tenants' ? <TenantsPage/> : role === 'agent' && active === 'Workspace' ? <AgentWorkspace/> : isDashboard && role !== 'agent' ? <Dashboard role={role} onNavigate={setActive}/> : <GenericPage title={active} role={role}/>}</main></div>{sidebarOpen && <div className="scrim" onClick={() => setSidebarOpen(false)}/>}</div>
 }

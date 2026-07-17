@@ -8,6 +8,8 @@ This repository implements the first production slice:
 
 - Responsive Super Admin, Tenant Admin, and Agent interfaces
 - Sanctum session authentication with role-locked production UI
+- Transactional Super Admin onboarding that creates a tenant and its initial Tenant Admin together
+- Database-backed tenant list, tenant suspension/reactivation, live dashboard counts, and sign-out
 - Tenant-aware models, middleware, queries, validation, and WebSocket channel authorization
 - Tenants, agents, extensions, extension devices/sessions, queues, DIDs, IVR versions, calls, legs, events, recordings, commands, and audit schema
 - Dynamic FreeSWITCH directory lookup through `mod_xml_curl`
@@ -16,7 +18,7 @@ This repository implements the first production slice:
 - PostgreSQL tenant-isolation integration tests
 - Nginx, systemd, FreeSWITCH, and logrotate templates for Debian 12
 
-Outbound campaigns, lead imports, the complete IVR runtime, recording post-processing, and progressive dialing remain later phases. The existing menu previews those product areas only in demo mode; do not treat them as completed telephony features.
+Agent/extension management screens, outbound campaigns, lead imports, the complete IVR runtime, recording post-processing, and progressive dialing remain later phases. Except for the Super Admin Tenants screen, most management menus still preview their intended design and must not be treated as completed workflows.
 
 ## Architecture
 
@@ -385,22 +387,24 @@ Permit only the ports you actively use:
 
 Do not expose PostgreSQL `5432`, Redis `6379`, PHP-FPM, Reverb `8080`, or ESL `8021`.
 
-## First tenant and two internal extensions
+## Onboard the first tenant
 
 1. Open `https://pbxpro.test` and sign in as the seeded Super Admin.
-2. Create tenant `ABC Finance` with code `abcfinance`, SIP domain `abcfinance.pbxpro.test`, and extension range `1000–1999`.
-3. Create its Tenant Admin.
-4. Sign in as that Tenant Admin and create extensions `1001` and `1002`, each with a unique password of at least 16 characters.
-5. Point the SIP domain to the VM, or use split DNS during testing.
-6. Configure two SIP clients with their extension number, password, SIP domain, and port `5060` or TLS port `5061`.
-7. Confirm registrations:
+2. Open **Tenants** and select **Onboard tenant**.
+3. Create tenant `ABC Finance` with code `abcfinance`, SIP domain `abcfinance.pbxpro.test`, extension range `1000–1999`, capacity limits, and its initial Tenant Admin credentials.
+4. Submit the form. Tenant and administrator creation is one database transaction; validation failure creates neither record.
+5. Use the top-bar sign-out button, then sign in with the new Tenant Admin account.
+
+Tenant Admin extension/agent provisioning is the next application milestone. Complete that workflow before configuring real SIP clients. After extensions `1001` and `1002` exist with unique passwords of at least 16 characters, point the SIP domain to the VM and configure the clients on port `5060` or TLS port `5061`.
+
+Confirm registrations:
 
 ```bash
 fs_cli -x 'show registrations'
 fs_cli -x 'sofia status profile internal reg'
 ```
 
-8. Dial `1002` from `1001`. Inspect application and FreeSWITCH logs if routing fails:
+Dial `1002` from `1001`. Inspect application and FreeSWITCH logs if routing fails:
 
 ```bash
 tail -f /var/www/pbxpro/backend/storage/logs/laravel.log

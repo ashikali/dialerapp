@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login',[AuthController::class,'login'])->middleware('throttle:5,1');
-Route::middleware('auth:sanctum')->group(function(){
+Route::middleware(['auth:sanctum','tenant.active'])->group(function(){
     Route::post('/auth/logout',[AuthController::class,'logout']);
     Route::get('/me',fn(Request $request)=>response()->json(['user'=>$request->user()]));
     Route::get('/dashboard',DashboardController::class);

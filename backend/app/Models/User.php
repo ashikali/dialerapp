@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -18,5 +19,6 @@ class User extends Authenticatable
     protected function casts(): array { return ['password'=>'hashed','role'=>UserRole::class,'email_verified_at'=>'datetime']; }
     public function isSuperAdmin(): bool { return $this->role === UserRole::SUPER_ADMIN; }
     public function isTenantAdmin(): bool { return $this->role === UserRole::TENANT_ADMIN; }
+    public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
     public function agent(): HasOne { return $this->hasOne(Agent::class); }
 }
