@@ -5,12 +5,9 @@
       <param name="gateway-credentials" value="pbxpro:CHANGE_ME_XML_TOKEN"/>
       <param name="method" value="POST"/>
       <param name="timeout" value="5"/>
-    </binding>
-    <binding name="pbxpro-dialplan">
-      <param name="gateway-url" value="https://pbxpro.test/freeswitch/xml/dialplan" bindings="dialplan"/>
-      <param name="gateway-credentials" value="pbxpro:CHANGE_ME_XML_TOKEN"/>
-      <param name="method" value="POST"/>
-      <param name="timeout" value="5"/>
+      <param name="enable-cacert-check" value="true"/>
+      <param name="enable-ssl-verifyhost" value="true"/>
+      <param name="ssl-cacert-file" value="/etc/ssl/certs/ca-certificates.crt"/>
     </binding>
   </bindings>
 </configuration>

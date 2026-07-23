@@ -301,10 +301,11 @@ If the installed Windows curl does not support that option, use `--ssl-no-revoke
 
 ### 9. Install FreeSWITCH from the official repository
 
-Official binary packages require a SignalWire Personal Access Token. Create one in your SignalWire account, then:
+Official binary packages require a SignalWire Personal Access Token. Create one in your SignalWire account, then enter it without echoing it:
 
 ```bash
-export TOKEN='YOUR_SIGNALWIRE_PERSONAL_ACCESS_TOKEN'
+read -rsp 'SignalWire personal access token: ' TOKEN
+echo
 apt install -y gnupg2 wget lsb-release
 wget --http-user=signalwire --http-password="$TOKEN" \
   -O /usr/share/keyrings/signalwire-freeswitch-repo.gpg \
@@ -324,7 +325,16 @@ The official FreeSWITCH guide documents the authenticated repository and package
 
 ### 10. Configure FreeSWITCH integration
 
-Back up the original files and install the templates:
+FreeSWITCH calls the local PBXPro HTTPS endpoint. For the Windows mkcert development certificate, copy `%LOCALAPPDATA%\mkcert\rootCA.pem` to `/usr/local/share/ca-certificates/pbxpro-mkcert-ca.crt` on Debian, then:
+
+```bash
+update-ca-certificates
+curl -fsS https://pbxpro.test/up >/dev/null
+```
+
+Never copy `rootCA-key.pem`; only the public `rootCA.pem` belongs on the VM.
+
+Back up the original files and install the templates. The secrets are read from the existing Laravel environment without printing them:
 
 ```bash
 cp /etc/freeswitch/autoload_configs/xml_curl.conf.xml{,.bak}
@@ -332,10 +342,15 @@ cp /etc/freeswitch/autoload_configs/event_socket.conf.xml{,.bak}
 cp /var/www/pbxpro/deploy/freeswitch/xml_curl.conf.xml /etc/freeswitch/autoload_configs/xml_curl.conf.xml
 cp /var/www/pbxpro/deploy/freeswitch/event_socket.conf.xml /etc/freeswitch/autoload_configs/event_socket.conf.xml
 cp /var/www/pbxpro/deploy/freeswitch/pbxpro-internal.xml /etc/freeswitch/dialplan/pbxpro-internal.xml
-sed -i 's/CHANGE_ME_XML_TOKEN/YOUR_XML_TOKEN/g' /etc/freeswitch/autoload_configs/xml_curl.conf.xml
-sed -i 's/CHANGE_ME_ESL_PASSWORD/YOUR_ESL_PASSWORD/g' /etc/freeswitch/autoload_configs/event_socket.conf.xml
+xml_token=$(sed -n 's/^FREESWITCH_XML_TOKEN=//p' /var/www/pbxpro/backend/.env)
+esl_password=$(sed -n 's/^FREESWITCH_ESL_PASSWORD=//p' /var/www/pbxpro/backend/.env)
+sed -i "s/CHANGE_ME_XML_TOKEN/$xml_token/g" /etc/freeswitch/autoload_configs/xml_curl.conf.xml
+sed -i "s/CHANGE_ME_ESL_PASSWORD/$esl_password/g" /etc/freeswitch/autoload_configs/event_socket.conf.xml
+unset xml_token esl_password
 chown -R freeswitch:freeswitch /etc/freeswitch
 ```
+
+PBXPro binds XML Curl only to the dynamic directory. The internal dialplan remains local in `pbxpro-internal.xml`; binding XML Curl to `dialplan` would replace the local dialplan completely.
 
 Confirm these modules are installed and enabled in `/etc/freeswitch/autoload_configs/modules.conf.xml`:
 
