@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -21,4 +22,5 @@ class User extends Authenticatable
     public function isTenantAdmin(): bool { return $this->role === UserRole::TENANT_ADMIN; }
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
     public function agent(): HasOne { return $this->hasOne(Agent::class); }
+    public function extensions(): HasMany { return $this->hasMany(Extension::class); }
 }

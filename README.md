@@ -10,6 +10,8 @@ This repository implements the first production slice:
 - Sanctum session authentication with role-locked production UI
 - Transactional Super Admin onboarding that creates a tenant and its initial Tenant Admin together
 - Database-backed tenant list, tenant suspension/reactivation, live dashboard counts, and sign-out
+- Tenant Admin extension provisioning/editing with range/capacity enforcement, generated credentials, and encrypted SIP secrets
+- Tenant Admin agent provisioning with portal credentials and optional extension assignment
 - Tenant-aware models, middleware, queries, validation, and WebSocket channel authorization
 - Tenants, agents, extensions, extension devices/sessions, queues, DIDs, IVR versions, calls, legs, events, recordings, commands, and audit schema
 - Dynamic FreeSWITCH directory lookup through `mod_xml_curl`
@@ -18,7 +20,7 @@ This repository implements the first production slice:
 - PostgreSQL tenant-isolation integration tests
 - Nginx, systemd, FreeSWITCH, and logrotate templates for Debian 12
 
-Agent/extension management screens, outbound campaigns, lead imports, the complete IVR runtime, recording post-processing, and progressive dialing remain later phases. Except for the Super Admin Tenants screen, most management menus still preview their intended design and must not be treated as completed workflows.
+Outbound campaigns, lead imports, the complete IVR runtime, recording post-processing, and progressive dialing remain later phases. Except for Tenants, Extensions, and Agents, the management menus still preview their intended design and must not be treated as completed workflows.
 
 ## Architecture
 
@@ -190,8 +192,8 @@ APP_DEBUG=false
 APP_URL=https://pbxpro.test
 FRONTEND_URL=https://pbxpro.test
 DB_PASSWORD=CHANGE_ME_DATABASE_PASSWORD
-SESSION_DOMAIN=pbxpro.test
-SANCTUM_STATEFUL_DOMAINS=pbxpro.test
+SESSION_DOMAIN=.pbxpro.test
+SANCTUM_STATEFUL_DOMAINS=pbxpro.test,*.pbxpro.test
 REVERB_APP_KEY=CHANGE_ME_RANDOM_KEY
 REVERB_APP_SECRET=CHANGE_ME_RANDOM_SECRET
 REVERB_HOST=pbxpro.test
@@ -395,7 +397,16 @@ Do not expose PostgreSQL `5432`, Redis `6379`, PHP-FPM, Reverb `8080`, or ESL `8
 4. Submit the form. Tenant and administrator creation is one database transaction; validation failure creates neither record.
 5. Use the top-bar sign-out button, then sign in with the new Tenant Admin account.
 
-Tenant Admin extension/agent provisioning is the next application milestone. Complete that workflow before configuring real SIP clients. After extensions `1001` and `1002` exist with unique passwords of at least 16 characters, point the SIP domain to the VM and configure the clients on port `5060` or TLS port `5061`.
+## Provision the first extensions and agents
+
+1. Sign in at `https://abcfinance.pbxpro.test` as the ABC Finance Tenant Admin.
+2. Open **Extensions**, select **Add extension**, and create extensions `1001` and `1002`. The form generates a different secure SIP password for each extension; copy each password before saving.
+3. Open **Agents**, select **Add agent**, create each agent's portal login, and assign an available extension.
+4. Verify that the Extensions screen shows the assigned user and that the Agents screen shows the assigned extension.
+
+SIP passwords are encrypted at rest and are never returned by the API after creation. Store each password securely when it is generated. Editing an extension keeps the existing secret by default; use **Generate new SIP password** only when intentionally rotating device credentials.
+
+After extensions `1001` and `1002` exist, point the SIP domain to the VM and configure the clients on port `5060` or TLS port `5061`.
 
 Confirm registrations:
 

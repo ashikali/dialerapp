@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentSessionController;
+use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExtensionController;
@@ -14,6 +15,9 @@ Route::middleware(['auth:sanctum','tenant.active'])->group(function(){
     Route::get('/me',fn(Request $request)=>response()->json(['user'=>$request->user()]));
     Route::get('/dashboard',DashboardController::class);
     Route::middleware('role:SUPER_ADMIN')->group(function(){ Route::apiResource('tenants',TenantController::class)->only(['index','store','update']); });
-    Route::middleware('role:TENANT_ADMIN')->group(function(){ Route::apiResource('extensions',ExtensionController::class)->only(['index','store']); });
+    Route::middleware('role:TENANT_ADMIN')->group(function(){
+        Route::apiResource('extensions',ExtensionController::class)->only(['index','store','update']);
+        Route::apiResource('agents',AgentController::class)->only(['index','store']);
+    });
     Route::prefix('agent')->middleware('role:AGENT')->group(function(){ Route::post('/sessions',[AgentSessionController::class,'start']); Route::patch('/sessions/{session}/status',[AgentSessionController::class,'status']); Route::delete('/sessions/{session}',[AgentSessionController::class,'stop']); });
 });
