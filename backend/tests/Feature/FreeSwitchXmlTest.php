@@ -34,6 +34,8 @@ class FreeSwitchXmlTest extends TestCase
         $xml=simplexml_load_string($response->getContent());
         $this->assertSame('directory',(string)$xml->section['name']);
         $this->assertSame('abcfinance.pbxpro.test',(string)$xml->section->domain['name']);
+        $this->assertSame('dial-string',(string)$xml->section->domain->params->param['name']);
+        $this->assertStringContainsString('sofia_contact',(string)$xml->section->domain->params->param['value']);
         $this->assertSame('1001',(string)$xml->section->domain->users->user['id']);
         $variables=[];
         foreach ($xml->section->domain->users->user->variables->variable as $variable) {

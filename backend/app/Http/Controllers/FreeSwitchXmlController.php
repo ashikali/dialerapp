@@ -28,7 +28,9 @@ class FreeSwitchXmlController extends Controller
         $extension=Extension::withoutGlobalScope('tenant')->where('tenant_id',$tenant->id)->where('extension_number',$userName)->where('status','ACTIVE')->first();
         if (!$extension) return $this->notFound();
 
-        $xml=new \SimpleXMLElement('<document type="freeswitch/xml"/>'); $section=$xml->addChild('section'); $section->addAttribute('name','directory'); $domain=$section->addChild('domain'); $domain->addAttribute('name',$tenant->sip_domain); $users=$domain->addChild('users'); $user=$users->addChild('user'); $user->addAttribute('id',$extension->extension_number); $params=$user->addChild('params'); $param=$params->addChild('param'); $param->addAttribute('name','password'); $param->addAttribute('value',$extension->sip_password); $vars=$user->addChild('variables');
+        $xml=new \SimpleXMLElement('<document type="freeswitch/xml"/>'); $section=$xml->addChild('section'); $section->addAttribute('name','directory'); $domain=$section->addChild('domain'); $domain->addAttribute('name',$tenant->sip_domain);
+        $domainParams=$domain->addChild('params'); $dialString=$domainParams->addChild('param'); $dialString->addAttribute('name','dial-string'); $dialString->addAttribute('value','{^^:sip_invite_domain=${dialed_domain}:presence_id=${dialed_user}@${dialed_domain}}${sofia_contact(*/${dialed_user}@${dialed_domain})}');
+        $users=$domain->addChild('users'); $user=$users->addChild('user'); $user->addAttribute('id',$extension->extension_number); $params=$user->addChild('params'); $param=$params->addChild('param'); $param->addAttribute('name','password'); $param->addAttribute('value',$extension->sip_password); $vars=$user->addChild('variables');
         foreach(['user_context'=>'pbxpro_internal','tenant_id'=>$tenant->id,'effective_caller_id_name'=>$extension->caller_id_name,'effective_caller_id_number'=>$extension->caller_id_number] as $name=>$value){$v=$vars->addChild('variable');$v->addAttribute('name',$name);$v->addAttribute('value',(string)$value);}
         return response($xml->asXML(),200,['Content-Type'=>'application/xml']);
     }
