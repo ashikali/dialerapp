@@ -54,4 +54,32 @@ class FreeSwitchXmlTest extends TestCase
             ->assertSee('<section name="result">',false)
             ->assertSee('<result status="not found"/>',false);
     }
+
+    public function test_registration_lookup_prioritizes_sip_auth_realm_over_profile_ip(): void
+    {
+        config(['services.freeswitch.xml_token'=>'xml-test-token']);
+        $tenant=Tenant::create([
+            'name'=>'ABC Finance','code'=>'abcfinance','sip_domain'=>'abcfinance.pbxpro.test','status'=>'ACTIVE',
+            'timezone'=>'UTC','default_language'=>'en','extension_start'=>1000,'extension_end'=>1999,
+            'max_extensions'=>100,'max_agents'=>50,'max_queues'=>10,'max_campaigns'=>0,
+            'max_concurrent_calls'=>25,'recording_retention_days'=>90,'features'=>[],
+        ]);
+        Extension::withoutEvents(fn()=>Extension::forceCreate([
+            'tenant_id'=>$tenant->id,'extension_number'=>'1001','sip_username'=>'1001',
+            'sip_password'=>'Strong-SIP-Secret-1001','caller_id_name'=>'John Smith','caller_id_number'=>'1001',
+            'status'=>'ACTIVE','webrtc_enabled'=>true,'voicemail_enabled'=>false,'dnd_enabled'=>false,'ring_timeout'=>30,
+        ]));
+
+        $response=$this->withBasicAuth('pbxpro','xml-test-token')->post('/freeswitch/xml/directory',[
+            'action'=>'sip_auth',
+            'domain'=>'192.168.1.26',
+            'user'=>'1001',
+            'sip_auth_realm'=>'abcfinance.pbxpro.test',
+            'sip_auth_username'=>'1001',
+        ]);
+
+        $response->assertOk()
+            ->assertSee('<domain name="abcfinance.pbxpro.test">',false)
+            ->assertSee('<user id="1001">',false);
+    }
 }

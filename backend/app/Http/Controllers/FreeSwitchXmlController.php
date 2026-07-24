@@ -17,8 +17,8 @@ class FreeSwitchXmlController extends Controller
     public function directory(Request $request): Response
     {
         $this->authorizeServer($request);
-        $domainName=(string)($request->input('domain') ?: $request->input('sip_auth_realm') ?: '');
-        $userName=(string)($request->input('user') ?: $request->input('sip_auth_username') ?: '');
+        $domainName=(string)($request->input('sip_auth_realm') ?: $request->input('domain') ?: '');
+        $userName=(string)($request->input('sip_auth_username') ?: $request->input('user') ?: '');
         if ($domainName==='' && $request->input('tag_name')==='domain') $domainName=(string)$request->input('key_value','');
         if ($userName==='' && $request->input('key_name')==='id') $userName=(string)$request->input('key_value','');
         if ($domainName==='' || $userName==='') return $this->notFound();
