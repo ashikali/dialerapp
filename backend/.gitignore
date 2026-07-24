@@ -3,6 +3,9 @@
 /public/build
 /public/hot
 /public/storage
+/bootstrap/cache/
+/storage/framework/
+/storage/logs/
 /storage/*.key
 /storage/pail
 /vendor
