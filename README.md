@@ -53,9 +53,9 @@ deploy/logrotate/     Laravel log rotation
 The commands below assume:
 
 - A clean Debian 12 VM and a root shell (`su -`)
-- Windows host IP `192.168.56.1`
-- Debian PBXPro VM IP `192.168.56.105`
-- Local domain `pbxpro.test`, mapped to `192.168.56.105` in the Windows hosts file
+- Windows host connected to the same LAN as the VM
+- Debian PBXPro VM IP `192.168.1.26`
+- Local domain `pbxpro.test`, mapped to `192.168.1.26` in the Windows hosts file
 - Project files authored under `DialerApp` on Windows and transferred to `/var/www/pbxpro` with WinSCP
 - Repository installed at `/var/www/pbxpro`
 - One-server launch topology with services bound locally where possible
@@ -265,11 +265,11 @@ $mkcert.FullName
 Add the VM address to `C:\Windows\System32\drivers\etc\hosts` using an Administrator editor:
 
 ```text
-192.168.56.105 pbxpro.test
-192.168.56.105 abcfinance.pbxpro.test
+192.168.1.26 pbxpro.test
+192.168.1.26 abcfinance.pbxpro.test
 ```
 
-Copy both generated files to the Debian VM at `192.168.56.105` with WinSCP, then:
+Copy both generated files to the Debian VM at `192.168.1.26` with WinSCP, then:
 
 ```bash
 mkdir -p /etc/nginx/ssl
@@ -316,7 +316,7 @@ chmod 600 /etc/apt/auth.conf.d/freeswitch.conf
 echo "deb [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ bookworm main" \
   | tee /etc/apt/sources.list.d/freeswitch.list
 apt update
-apt install -y freeswitch-meta-vanilla freeswitch-sounds-en-us-callie freeswitch-sounds-music \
+apt install -y freeswitch-meta-vanilla freeswitch-sounds-en-us-callie freeswitch-music-default \
   freeswitch-mod-xml-curl freeswitch-mod-callcenter freeswitch-mod-event-socket
 unset TOKEN
 ```
@@ -339,6 +339,7 @@ Back up the original files and install the templates. The secrets are read from 
 ```bash
 cp /etc/freeswitch/autoload_configs/xml_curl.conf.xml{,.bak}
 cp /etc/freeswitch/autoload_configs/event_socket.conf.xml{,.bak}
+cp /etc/freeswitch/sip_profiles/internal.xml{,.bak}
 cp /var/www/pbxpro/deploy/freeswitch/xml_curl.conf.xml /etc/freeswitch/autoload_configs/xml_curl.conf.xml
 cp /var/www/pbxpro/deploy/freeswitch/event_socket.conf.xml /etc/freeswitch/autoload_configs/event_socket.conf.xml
 cp /var/www/pbxpro/deploy/freeswitch/pbxpro-internal.xml /etc/freeswitch/dialplan/pbxpro-internal.xml
@@ -347,10 +348,15 @@ esl_password=$(sed -n 's/^FREESWITCH_ESL_PASSWORD=//p' /var/www/pbxpro/backend/.
 sed -i "s/CHANGE_ME_XML_TOKEN/$xml_token/g" /etc/freeswitch/autoload_configs/xml_curl.conf.xml
 sed -i "s/CHANGE_ME_ESL_PASSWORD/$esl_password/g" /etc/freeswitch/autoload_configs/event_socket.conf.xml
 unset xml_token esl_password
+sip_ip=192.168.1.26
+sed -i "s|<param name=\"rtp-ip\" value=\"\\$\\${local_ip_v4}\"/>|<param name=\"rtp-ip\" value=\"$sip_ip\"/>|" /etc/freeswitch/sip_profiles/internal.xml
+sed -i "s|<param name=\"sip-ip\" value=\"\\$\\${local_ip_v4}\"/>|<param name=\"sip-ip\" value=\"$sip_ip\"/>|" /etc/freeswitch/sip_profiles/internal.xml
+unset sip_ip
 chown -R freeswitch:freeswitch /etc/freeswitch
 ```
 
 PBXPro binds XML Curl only to the dynamic directory. The internal dialplan remains local in `pbxpro-internal.xml`; binding XML Curl to `dialplan` would replace the local dialplan completely.
+The explicit internal SIP/RTP address ensures FreeSWITCH selects the VM's Windows-accessible LAN adapter (`192.168.1.26`). Change `sip_ip` when deploying on a different network.
 
 Confirm these modules are installed and enabled in `/etc/freeswitch/autoload_configs/modules.conf.xml`:
 
@@ -367,9 +373,12 @@ Keep ESL on `127.0.0.1:8021`; never expose it to the Internet. Restart and inspe
 ```bash
 systemctl enable --now freeswitch
 systemctl restart freeswitch
-fs_cli -x 'status'
-fs_cli -x 'module_exists mod_xml_curl'
-fs_cli -x 'module_exists mod_callcenter'
+esl_password=$(sed -n 's/^FREESWITCH_ESL_PASSWORD=//p' /var/www/pbxpro/backend/.env)
+fs_cli -p "$esl_password" -x 'status'
+fs_cli -p "$esl_password" -x 'module_exists mod_xml_curl'
+fs_cli -p "$esl_password" -x 'module_exists mod_callcenter'
+fs_cli -p "$esl_password" -x 'user_exists id 1001 abcfinance.pbxpro.test'
+unset esl_password
 ```
 
 ### 11. Install PBXPro background services
@@ -426,8 +435,10 @@ After extensions `1001` and `1002` exist, point the SIP domain to the VM and con
 Confirm registrations:
 
 ```bash
-fs_cli -x 'show registrations'
-fs_cli -x 'sofia status profile internal reg'
+esl_password=$(sed -n 's/^FREESWITCH_ESL_PASSWORD=//p' /var/www/pbxpro/backend/.env)
+fs_cli -p "$esl_password" -x 'show registrations'
+fs_cli -p "$esl_password" -x 'sofia status profile internal reg'
+unset esl_password
 ```
 
 Dial `1002` from `1001`. Inspect application and FreeSWITCH logs if routing fails:
