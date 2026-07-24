@@ -352,11 +352,15 @@ sip_ip=192.168.1.26
 sed -i "s|<param name=\"rtp-ip\" value=\"\\$\\${local_ip_v4}\"/>|<param name=\"rtp-ip\" value=\"$sip_ip\"/>|" /etc/freeswitch/sip_profiles/internal.xml
 sed -i "s|<param name=\"sip-ip\" value=\"\\$\\${local_ip_v4}\"/>|<param name=\"sip-ip\" value=\"$sip_ip\"/>|" /etc/freeswitch/sip_profiles/internal.xml
 unset sip_ip
+sed -i 's|<param name="force-register-domain" value="$${domain}"/>|<!--<param name="force-register-domain" value="$${domain}"/>-->|' /etc/freeswitch/sip_profiles/internal.xml
+sed -i 's|<param name="force-subscription-domain" value="$${domain}"/>|<!--<param name="force-subscription-domain" value="$${domain}"/>-->|' /etc/freeswitch/sip_profiles/internal.xml
+sed -i 's|<param name="force-register-db-domain" value="$${domain}"/>|<!--<param name="force-register-db-domain" value="$${domain}"/>-->|' /etc/freeswitch/sip_profiles/internal.xml
 chown -R freeswitch:freeswitch /etc/freeswitch
 ```
 
 PBXPro binds XML Curl only to the dynamic directory. The internal dialplan remains local in `pbxpro-internal.xml`; binding XML Curl to `dialplan` would replace the local dialplan completely.
 The explicit internal SIP/RTP address ensures FreeSWITCH selects the VM's Windows-accessible LAN adapter (`192.168.1.26`). Change `sip_ip` when deploying on a different network.
+The three stock `force-*-domain` settings must remain disabled. They force all registrations into a single IP-valued domain and are incompatible with PBXPro's tenant SIP realms.
 
 Confirm these modules are installed and enabled in `/etc/freeswitch/autoload_configs/modules.conf.xml`:
 
