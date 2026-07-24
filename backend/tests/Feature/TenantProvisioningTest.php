@@ -61,6 +61,37 @@ class TenantProvisioningTest extends TestCase
         $this->assertSame($secret,$extension->getRawOriginal('sip_password'));
     }
 
+    public function test_tenant_admin_can_reveal_own_extension_secret_with_audit_entry(): void
+    {
+        [$tenant,$admin]=$this->tenantWithAdmin('alpha');
+        $extension=Extension::create($this->extensionRecord($tenant,'1001'));
+
+        $this->actingAs($admin)
+            ->postJson("/api/v1/extensions/{$extension->id}/reveal-password")
+            ->assertOk()
+            ->assertHeader('Cache-Control','no-store, private')
+            ->assertJsonPath('data.sip_password','Strong-SIP-Secret-1001');
+
+        $this->assertDatabaseHas('audit_logs',[
+            'tenant_id'=>$tenant->id,
+            'user_id'=>$admin->id,
+            'action'=>'extension.sip_password_revealed',
+            'auditable_id'=>$extension->id,
+        ]);
+    }
+
+    public function test_tenant_admin_cannot_reveal_another_tenants_extension_secret(): void
+    {
+        [, $admin]=$this->tenantWithAdmin('alpha');
+        [$beta]=$this->tenantWithAdmin('beta');
+        $extension=Extension::withoutEvents(fn()=>Extension::forceCreate($this->extensionRecord($beta,'1001')));
+
+        $this->actingAs($admin)
+            ->postJson("/api/v1/extensions/{$extension->id}/reveal-password")
+            ->assertNotFound()
+            ->assertJsonMissingPath('data.sip_password');
+    }
+
     public function test_tenant_admin_can_create_agent_and_assign_own_extension(): void
     {
         [$tenant,$admin]=$this->tenantWithAdmin('alpha');

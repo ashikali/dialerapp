@@ -119,6 +119,7 @@ export const api = {
   extensions: () => request<Paginated<Extension>>('/api/v1/extensions'),
   createExtension: (payload: ExtensionPayload) => request<{data: Extension}>('/api/v1/extensions', { method: 'POST', body: JSON.stringify(payload) }),
   updateExtension: (id: string, payload: ExtensionUpdatePayload) => request<{data: Extension}>(`/api/v1/extensions/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  revealExtensionPassword: (id: string) => request<{data: {sip_password: string}}>(`/api/v1/extensions/${id}/reveal-password`, { method: 'POST' }),
   agents: () => request<Paginated<Agent>>('/api/v1/agents'),
   createAgent: (payload: AgentPayload) => request<{data: Agent}>('/api/v1/agents', { method: 'POST', body: JSON.stringify(payload) }),
 }

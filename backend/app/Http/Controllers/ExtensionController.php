@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Extension;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -41,6 +43,33 @@ class ExtensionController extends Controller
         $data['extension_number']=(string)$data['extension_number'];
         $extension->update($data);
         return response()->json(['data'=>$extension->fresh()->load('user:id,name,email')]);
+    }
+
+    public function revealPassword(Request $request,Extension $extension): JsonResponse
+    {
+        abort_unless($extension->tenant_id === $request->user()->tenant_id,404);
+
+        DB::table('audit_logs')->insert([
+            'id'=>(string) Str::uuid(),
+            'tenant_id'=>$extension->tenant_id,
+            'user_id'=>$request->user()->id,
+            'action'=>'extension.sip_password_revealed',
+            'auditable_type'=>Extension::class,
+            'auditable_id'=>$extension->id,
+            'before'=>null,
+            'after'=>json_encode(['extension_number'=>$extension->extension_number],JSON_THROW_ON_ERROR),
+            'ip_address'=>$request->ip(),
+            'user_agent'=>Str::limit((string) $request->userAgent(),500,''),
+            'created_at'=>now(),
+            'updated_at'=>now(),
+        ]);
+
+        return response()->json(['data'=>[
+            'sip_password'=>$extension->sip_password,
+        ]])->withHeaders([
+            'Cache-Control'=>'no-store, private',
+            'Pragma'=>'no-cache',
+        ]);
     }
 
     private function validated(Request $request,?Extension $extension): array

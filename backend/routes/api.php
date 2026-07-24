@@ -16,6 +16,7 @@ Route::middleware(['auth:sanctum','tenant.active'])->group(function(){
     Route::get('/dashboard',DashboardController::class);
     Route::middleware('role:SUPER_ADMIN')->group(function(){ Route::apiResource('tenants',TenantController::class)->only(['index','store','update']); });
     Route::middleware('role:TENANT_ADMIN')->group(function(){
+        Route::post('/extensions/{extension}/reveal-password',[ExtensionController::class,'revealPassword'])->middleware('throttle:10,1');
         Route::apiResource('extensions',ExtensionController::class)->only(['index','store','update']);
         Route::apiResource('agents',AgentController::class)->only(['index','store']);
     });

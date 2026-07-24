@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CircleDot, Copy, KeyRound, Pencil, Phone, Plus, RefreshCw, Search, X } from 'lucide-react'
+import { CircleDot, Copy, Eye, EyeOff, KeyRound, Pencil, Phone, Plus, RefreshCw, Search, X } from 'lucide-react'
 import { api, type Extension, type ExtensionPayload, type ExtensionUpdatePayload } from '../../lib/api'
 
 const passwordAlphabet='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%_-'
@@ -51,10 +51,23 @@ function ExtensionModal({extension,onClose,onSaved}:{extension:Extension|null;on
     webrtc_enabled:extension.webrtc_enabled,voicemail_enabled:extension.voicemail_enabled,ring_timeout:extension.ring_timeout,
   }:newExtensionForm())
   const [saving,setSaving]=useState(false)
+  const [revealing,setRevealing]=useState(false)
+  const [showPassword,setShowPassword]=useState(!extension)
   const [copied,setCopied]=useState(false)
   const [error,setError]=useState('')
   function setNumber(value:number) { setForm(current=>({...current,extension_number:value,sip_username:String(value),caller_id_number:String(value)})) }
-  function regenerate() { setForm(current=>({...current,sip_password:generateSipPassword()}));setCopied(false) }
+  function regenerate() { setForm(current=>({...current,sip_password:generateSipPassword()}));setShowPassword(true);setCopied(false) }
+  async function revealPassword() {
+    if(!extension)return
+    if(form.sip_password) { setShowPassword(current=>!current);return }
+    setRevealing(true);setError('')
+    try {
+      const result=await api.revealExtensionPassword(extension.id)
+      setForm(current=>({...current,sip_password:result.data.sip_password}))
+      setShowPassword(true)
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to reveal SIP password') }
+    finally { setRevealing(false) }
+  }
   async function copyPassword() { if(!form.sip_password)return;await navigator.clipboard.writeText(form.sip_password);setCopied(true) }
   async function submit(event:React.FormEvent) {
     event.preventDefault(); setSaving(true); setError('')
@@ -71,7 +84,7 @@ function ExtensionModal({extension,onClose,onSaved}:{extension:Extension|null;on
       <label>Caller ID name<input required value={form.caller_id_name} onChange={event=>setForm({...form,caller_id_name:event.target.value})} placeholder="John Smith"/></label>
       <label>SIP username<input required value={form.sip_username} onChange={event=>setForm({...form,sip_username:event.target.value})}/></label>
       <label>Caller ID number<input required value={form.caller_id_number} onChange={event=>setForm({...form,caller_id_number:event.target.value})}/></label>
-      <label className="wide">SIP password<div className="generated-secret"><KeyRound size={15}/><input aria-label="SIP password" required={!extension} minLength={form.sip_password?16:undefined} type="text" value={form.sip_password} onChange={event=>{setForm({...form,sip_password:event.target.value});setCopied(false)}} placeholder={extension?'Leave blank to keep the current password':'Generated secure password'}/><button type="button" onClick={regenerate} title="Generate new password" aria-label="Generate new SIP password"><RefreshCw size={14}/></button><button type="button" onClick={()=>void copyPassword()} disabled={!form.sip_password} aria-label="Copy SIP password"><Copy size={14}/></button></div><small className="field-help">{extension&&!form.sip_password?'Existing password will not change.':copied?'Password copied. Store it securely before saving.':'Automatically generated. Copy and store it securely before saving.'}</small></label>
+      <label className="wide">SIP password<div className="generated-secret"><KeyRound size={15}/><input aria-label="SIP password" required={!extension} minLength={form.sip_password?16:undefined} type={showPassword?'text':'password'} value={form.sip_password} onChange={event=>{setForm({...form,sip_password:event.target.value});setCopied(false)}} placeholder={extension?'Hidden — reveal or generate a replacement':'Generated secure password'}/>{extension&&<button type="button" onClick={()=>void revealPassword()} disabled={revealing} title={showPassword?'Hide password':'Reveal password'} aria-label={showPassword?'Hide SIP password':'Reveal SIP password'}>{showPassword?<EyeOff size={14}/>:<Eye size={14}/>}</button>}<button type="button" onClick={regenerate} title="Generate new password" aria-label="Generate new SIP password"><RefreshCw size={14}/></button><button type="button" onClick={()=>void copyPassword()} disabled={!form.sip_password} aria-label="Copy SIP password"><Copy size={14}/></button></div><small className="field-help">{revealing?'Retrieving password securely...':extension&&!form.sip_password?'Password is hidden. Reveal it or generate a replacement.':copied?'Password copied. Store it securely.':extension?'Revealing this password is recorded in the audit log.':'Automatically generated. Copy and store it securely before saving.'}</small></label>
       <label>Status<select value={form.status} onChange={event=>setForm({...form,status:event.target.value as ExtensionUpdatePayload['status']})}><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
       <label>Ring timeout<input required min="5" max="120" type="number" value={form.ring_timeout} onChange={event=>setForm({...form,ring_timeout:Number(event.target.value)})}/></label>
       <div className="check-options wide"><label><input type="checkbox" checked={form.webrtc_enabled} onChange={event=>setForm({...form,webrtc_enabled:event.target.checked})}/> WebRTC enabled</label><label><input type="checkbox" checked={form.voicemail_enabled} onChange={event=>setForm({...form,voicemail_enabled:event.target.checked})}/> Voicemail enabled</label></div>

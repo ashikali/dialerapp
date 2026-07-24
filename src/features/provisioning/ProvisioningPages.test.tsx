@@ -33,8 +33,20 @@ describe('Tenant Admin provisioning',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Extensions'}))
     fireEvent.click(await screen.findByRole('button',{name:'Edit'}))
     expect(screen.getByRole('heading',{name:'Edit extension'})).toBeInTheDocument()
-    expect(screen.getByRole('textbox',{name:'SIP password'})).toHaveValue('')
-    expect(screen.getByText('Existing password will not change.')).toBeInTheDocument()
+    expect(screen.getByLabelText('SIP password')).toHaveValue('')
+    expect(screen.getByText('Password is hidden. Reveal it or generate a replacement.')).toBeInTheDocument()
+  })
+
+  it('reveals an existing SIP password only after the admin requests it',async()=>{
+    vi.spyOn(api,'dashboard').mockRejectedValue(new Error('not needed'))
+    vi.spyOn(api,'extensions').mockResolvedValue({data:[extension],current_page:1,last_page:1,total:1})
+    vi.spyOn(api,'revealExtensionPassword').mockResolvedValue({data:{sip_password:'Strong-SIP-Secret-1001'}})
+    render(<App lockedRole="tenant"/>)
+    fireEvent.click(screen.getByRole('button',{name:'Extensions'}))
+    fireEvent.click(await screen.findByRole('button',{name:'Edit'}))
+    fireEvent.click(screen.getByRole('button',{name:'Reveal SIP password'}))
+    expect(await screen.findByDisplayValue('Strong-SIP-Secret-1001')).toBeInTheDocument()
+    expect(api.revealExtensionPassword).toHaveBeenCalledWith('extension-1')
   })
 
   it('loads agents and shows their assigned extension',async()=>{
