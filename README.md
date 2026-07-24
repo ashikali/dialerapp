@@ -428,7 +428,7 @@ Do not expose PostgreSQL `5432`, Redis `6379`, PHP-FPM, Reverb `8080`, or ESL `8
 3. Open **Agents**, select **Add agent**, create each agent's portal login, and assign an available extension.
 4. Verify that the Extensions screen shows the assigned user and that the Agents screen shows the assigned extension.
 
-SIP passwords are encrypted at rest and are never returned by the API after creation. Store each password securely when it is generated. Editing an extension keeps the existing secret by default; use **Generate new SIP password** only when intentionally rotating device credentials.
+SIP passwords are encrypted at rest and excluded from normal extension API responses. A Tenant Admin can reveal an individual password from the extension editor; each reveal is rate-limited, returned with no-store headers, and recorded in the audit log. Editing an extension keeps the existing secret by default; use **Generate new SIP password** only when intentionally rotating device credentials.
 
 After extensions `1001` and `1002` exist, point the SIP domain to the VM and configure the clients on port `5060` or TLS port `5061`.
 
