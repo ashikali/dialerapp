@@ -79,6 +79,59 @@ export type AgentPayload = {
   password_confirmation: string
   extension_id: string | null
 }
+export type QueueMember = {
+  id: string
+  priority: number
+  skill: number
+  agent: Agent
+}
+export type PbxQueue = {
+  id: string
+  name: string
+  number: string
+  strategy: 'longest-idle-agent'|'round-robin'|'top-down'|'agent-with-least-talk-time'|'agent-with-fewest-calls'|'sequentially-by-agent-order'|'ring-all'|'ring-progressively'
+  wrap_up_seconds: number
+  max_wait_seconds: number
+  max_size: number
+  music_on_hold: string
+  status: 'ACTIVE'|'INACTIVE'
+  members: QueueMember[]
+  created_at: string
+}
+export type QueuePayload = {
+  name: string
+  number: string
+  strategy: PbxQueue['strategy']
+  wrap_up_seconds: number
+  max_wait_seconds: number
+  max_size: number
+  music_on_hold: string
+  status: PbxQueue['status']
+  member_agent_ids: string[]
+}
+export type RingGroupMember = {
+  id: string
+  position: number
+  extension: Extension
+}
+export type RingGroup = {
+  id: string
+  name: string
+  number: string
+  strategy: 'SIMULTANEOUS'|'SEQUENTIAL'
+  ring_timeout: number
+  status: 'ACTIVE'|'INACTIVE'
+  members: RingGroupMember[]
+  created_at: string
+}
+export type RingGroupPayload = {
+  name: string
+  number: string
+  strategy: RingGroup['strategy']
+  ring_timeout: number
+  status: RingGroup['status']
+  member_extension_ids: string[]
+}
 type Paginated<T> = { data: T[]; current_page: number; last_page: number; total: number }
 
 function cookie(name: string): string | null {
@@ -122,4 +175,10 @@ export const api = {
   revealExtensionPassword: (id: string) => request<{data: {sip_password: string}}>(`/api/v1/extensions/${id}/reveal-password`, { method: 'POST' }),
   agents: () => request<Paginated<Agent>>('/api/v1/agents'),
   createAgent: (payload: AgentPayload) => request<{data: Agent}>('/api/v1/agents', { method: 'POST', body: JSON.stringify(payload) }),
+  queues: () => request<Paginated<PbxQueue>>('/api/v1/queues'),
+  createQueue: (payload: QueuePayload) => request<{data: PbxQueue}>('/api/v1/queues', { method: 'POST', body: JSON.stringify(payload) }),
+  updateQueue: (id: string, payload: QueuePayload) => request<{data: PbxQueue}>(`/api/v1/queues/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  ringGroups: () => request<Paginated<RingGroup>>('/api/v1/ring-groups'),
+  createRingGroup: (payload: RingGroupPayload) => request<{data: RingGroup}>('/api/v1/ring-groups', { method: 'POST', body: JSON.stringify(payload) }),
+  updateRingGroup: (id: string, payload: RingGroupPayload) => request<{data: RingGroup}>(`/api/v1/ring-groups/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
 }

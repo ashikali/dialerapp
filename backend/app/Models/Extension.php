@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Extension extends Model
 {
@@ -14,4 +15,5 @@ class Extension extends Model
     protected $hidden = ['sip_password'];
     protected function casts(): array { return ['sip_password'=>'encrypted','webrtc_enabled'=>'boolean','voicemail_enabled'=>'boolean','dnd_enabled'=>'boolean']; }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    public function ringGroupMemberships(): HasMany { return $this->hasMany(RingGroupMember::class); }
 }

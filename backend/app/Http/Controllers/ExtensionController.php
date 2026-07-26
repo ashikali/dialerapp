@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Extension;
+use App\Services\DestinationNumberValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,11 +22,12 @@ class ExtensionController extends Controller
             ->paginate(50));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request,DestinationNumberValidator $numbers): JsonResponse
     {
         $tenantId=$request->user()->tenant_id;
         $tenant=$request->user()->tenant;
         $data=$this->validated($request,null);
+        $numbers->ensureAvailable($tenantId,(string)$data['extension_number'],null,'extension_number');
 
         if (Extension::query()->count() >= $tenant->max_extensions) {
             throw ValidationException::withMessages(['extension_number'=>'This tenant has reached its extension capacity.']);
@@ -36,9 +38,10 @@ class ExtensionController extends Controller
         return response()->json(['data'=>$extension->makeHidden('sip_password')],201);
     }
 
-    public function update(Request $request,Extension $extension): JsonResponse
+    public function update(Request $request,Extension $extension,DestinationNumberValidator $numbers): JsonResponse
     {
         $data=$this->validated($request,$extension);
+        $numbers->ensureAvailable($request->user()->tenant_id,(string)$data['extension_number'],$extension,'extension_number');
         if (empty($data['sip_password'])) unset($data['sip_password']);
         $data['extension_number']=(string)$data['extension_number'];
         $extension->update($data);

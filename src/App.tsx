@@ -10,6 +10,8 @@ import {
 import { TenantsPage } from './features/tenants/TenantsPage'
 import { AgentsPage } from './features/provisioning/AgentsPage'
 import { ExtensionsPage } from './features/provisioning/ExtensionsPage'
+import { QueuesPage } from './features/provisioning/QueuesPage'
+import { RingGroupsPage } from './features/provisioning/RingGroupsPage'
 import { api, type DashboardSummary } from './lib/api'
 
 export type Role = 'super' | 'tenant' | 'agent'
@@ -161,7 +163,7 @@ function Dashboard({ role, onNavigate }: { role: 'super' | 'tenant'; onNavigate:
     <section className="card chart-card"><div className="card-title"><h3>Call Statistics</h3><button className="select-btn">This Week <ChevronDown size={14}/></button></div><LineChart/></section>
     <section className="card distribution-card"><div className="card-title"><h3>Call Distribution</h3></div><Distribution/></section>
     <LiveAgents/><MiniTenants role={role}/><RecentCalls/><SystemHealth/><ActiveCalls/>
-    <section className="quick-access"><h3>Quick Access</h3><div>{(role === 'super' ? [[Plus,'Add Tenant'],[Users,'Add Admin'],[Server,'PBX Server'],[Activity,'Usage Report'],[ShieldCheck,'Audit Logs'],[Settings,'Settings']] : [[Phone,'Add Extension'],[Users,'Add Agent'],[Headphones,'Create Queue'],[Network,'Create IVR'],[PhoneIncoming,'Add DID'],[PhoneOutgoing,'Campaign'],[Activity,'Reports'],[Settings,'Settings']]).map(([Icon,label]) => { const I = Icon as LucideIcon; return <button key={label as string} onClick={()=>label === 'Add Tenant' ? onNavigate('Tenants') : label === 'Add Extension' ? onNavigate('Extensions') : label === 'Add Agent' ? onNavigate('Agents') : undefined}><span><I size={21}/></span>{label as string}</button>})}</div></section>
+    <section className="quick-access"><h3>Quick Access</h3><div>{(role === 'super' ? [[Plus,'Add Tenant'],[Users,'Add Admin'],[Server,'PBX Server'],[Activity,'Usage Report'],[ShieldCheck,'Audit Logs'],[Settings,'Settings']] : [[Phone,'Add Extension'],[Users,'Add Agent'],[Headphones,'Create Queue'],[Network,'Create IVR'],[PhoneIncoming,'Add DID'],[PhoneOutgoing,'Campaign'],[Activity,'Reports'],[Settings,'Settings']]).map(([Icon,label]) => { const I = Icon as LucideIcon; return <button key={label as string} onClick={()=>label === 'Add Tenant' ? onNavigate('Tenants') : label === 'Add Extension' ? onNavigate('Extensions') : label === 'Add Agent' ? onNavigate('Agents') : label === 'Create Queue' ? onNavigate('Queues') : undefined}><span><I size={21}/></span>{label as string}</button>})}</div></section>
   </div>
 }
 
@@ -209,5 +211,5 @@ export default function App({ lockedRole, onLogout }: { lockedRole?: Role; onLog
   const isDashboard = active === 'Dashboard'
   return <div className="app-shell"><Sidebar role={role} active={active} onNavigate={setActive} collapsed={sidebarOpen} onClose={() => setSidebarOpen(false)}/><div className="main-shell"><Topbar role={role} setRole={setRole} onMenu={() => setSidebarOpen(true)} canSwitchRole={!lockedRole} onLogout={onLogout}/><main>
     <div className="page-heading"><div><h1>{active}</h1><p>{isDashboard ? role === 'super' ? 'Platform-wide performance and system overview' : 'Today’s contact-center performance at a glance' : active === 'Workspace' ? 'Manage conversations and customer outcomes' : `Manage ${active.toLowerCase()} for ${role === 'super' ? 'the platform' : 'ABC Finance'}`}</p></div>{(isDashboard || active === 'Workspace') && <div className="heading-actions"><button className="date-button"><CalendarDays size={16}/> Jul 7, 2026 – Jul 13, 2026</button><button className="export-button"><Download size={16}/> Export</button></div>}</div>
-    {role === 'super' && active === 'Tenants' ? <TenantsPage/> : role === 'tenant' && active === 'Agents' ? <AgentsPage/> : role === 'tenant' && active === 'Extensions' ? <ExtensionsPage/> : role === 'agent' && active === 'Workspace' ? <AgentWorkspace/> : isDashboard && role !== 'agent' ? <Dashboard role={role} onNavigate={setActive}/> : <GenericPage title={active} role={role}/>}</main></div>{sidebarOpen && <div className="scrim" onClick={() => setSidebarOpen(false)}/>}</div>
+    {role === 'super' && active === 'Tenants' ? <TenantsPage/> : role === 'tenant' && active === 'Agents' ? <AgentsPage/> : role === 'tenant' && active === 'Extensions' ? <ExtensionsPage/> : role === 'tenant' && active === 'Queues' ? <QueuesPage/> : role === 'tenant' && active === 'Ring Groups' ? <RingGroupsPage/> : role === 'agent' && active === 'Workspace' ? <AgentWorkspace/> : isDashboard && role !== 'agent' ? <Dashboard role={role} onNavigate={setActive}/> : <GenericPage title={active} role={role}/>}</main></div>{sidebarOpen && <div className="scrim" onClick={() => setSidebarOpen(false)}/>}</div>
 }

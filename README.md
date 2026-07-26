@@ -12,15 +12,17 @@ This repository implements the first production slice:
 - Database-backed tenant list, tenant suspension/reactivation, live dashboard counts, and sign-out
 - Tenant Admin extension provisioning/editing with range/capacity enforcement, generated credentials, and encrypted SIP secrets
 - Tenant Admin agent provisioning with portal credentials and optional extension assignment
+- Tenant Admin queue provisioning with strategies, limits, agent membership, and dynamic `mod_callcenter` configuration
+- Tenant Admin ring-group provisioning with simultaneous or sequential ringing and extension membership
 - Tenant-aware models, middleware, queries, validation, and WebSocket channel authorization
 - Tenants, agents, extensions, extension devices/sessions, queues, DIDs, IVR versions, calls, legs, events, recordings, commands, and audit schema
-- Dynamic FreeSWITCH directory lookup through `mod_xml_curl`
+- Dynamic FreeSWITCH directory, dialplan, and call-center configuration through `mod_xml_curl`
 - Persistent `php artisan telephony:esl` worker with reconnect/backoff and Redis command consumption
-- Internal extension dialplan example
+- Database-backed internal extension, queue, and ring-group routing
 - PostgreSQL tenant-isolation integration tests
 - Nginx, systemd, FreeSWITCH, and logrotate templates for Debian 12
 
-Outbound campaigns, lead imports, the complete IVR runtime, recording post-processing, and progressive dialing remain later phases. Except for Tenants, Extensions, and Agents, the management menus still preview their intended design and must not be treated as completed workflows.
+Outbound campaigns, lead imports, the complete IVR runtime, recording post-processing, and progressive dialing remain later phases. Except for Tenants, Extensions, Agents, Queues, and Ring Groups, the management menus still preview their intended design and must not be treated as completed workflows.
 
 ## Architecture
 
@@ -32,7 +34,7 @@ Browser (React)
   |-- SIP WSS / RTP -------------------> FreeSWITCH
                                          ^
 Laravel API --> Redis command list --> ESL worker
-FreeSWITCH --> XML Curl ------------> Laravel XML endpoint
+FreeSWITCH --> XML Curl ------------> Laravel directory/dialplan/configuration endpoints
 ```
 
 The Agent browser never connects to ESL. Only SIP/WebRTC signaling and media may connect directly to FreeSWITCH.
@@ -358,7 +360,7 @@ sed -i 's|<param name="force-register-db-domain" value="$${domain}"/>|<!--<param
 chown -R freeswitch:freeswitch /etc/freeswitch
 ```
 
-PBXPro binds XML Curl only to the dynamic directory. The internal dialplan remains local in `pbxpro-internal.xml`; binding XML Curl to `dialplan` would replace the local dialplan completely.
+PBXPro binds XML Curl to the dynamic directory, dialplan, and `callcenter.conf` configuration endpoints. Laravel resolves the tenant from the SIP domain and returns only that tenant's extensions and routes. The installed `pbxpro-internal.xml` remains a local fallback, while the dynamic dialplan provides database-backed extension, queue, and ring-group routing.
 The explicit internal SIP/RTP address ensures FreeSWITCH selects the VM's Windows-accessible LAN adapter (`192.168.1.26`). Change `sip_ip` when deploying on a different network.
 The three stock `force-*-domain` settings must remain disabled. They force all registrations into a single IP-valued domain and are incompatible with PBXPro's tenant SIP realms.
 
@@ -431,6 +433,8 @@ Do not expose PostgreSQL `5432`, Redis `6379`, PHP-FPM, Reverb `8080`, or ESL `8
 2. Open **Extensions**, select **Add extension**, and create extensions `1001` and `1002`. The form generates a different secure SIP password for each extension; copy each password before saving.
 3. Open **Agents**, select **Add agent**, create each agent's portal login, and assign an available extension.
 4. Verify that the Extensions screen shows the assigned user and that the Agents screen shows the assigned extension.
+5. Open **Ring Groups**, create a destination such as `6000`, select simultaneous or sequential ringing, and add extensions `1001` and `1002`.
+6. Open **Queues**, create a destination such as `7000`, select a strategy, and add agents that have active extensions.
 
 SIP passwords are encrypted at rest and excluded from normal extension API responses. A Tenant Admin can reveal an individual password from the extension editor; each reveal is rate-limited, returned with no-store headers, and recorded in the audit log. Editing an extension keeps the existing secret by default; use **Generate new SIP password** only when intentionally rotating device credentials.
 
@@ -452,6 +456,8 @@ tail -f /var/www/pbxpro/backend/storage/logs/laravel.log
 journalctl -fu pbxpro-esl
 fs_cli
 ```
+
+Then dial the ring-group and queue numbers. Ring groups route directly to their selected extensions. Queues are provided by FreeSWITCH `mod_callcenter`; active assigned agents are configured as callback agents and calls are offered according to the selected strategy. Queue and membership changes are sent to the persistent ESL worker, while the XML Curl configuration endpoint rebuilds the complete state after a FreeSWITCH restart. See the official [FreeSWITCH call queues documentation](https://developer.signalwire.com/freeswitch/applications/call-queues/).
 
 ## Tests
 
@@ -486,6 +492,12 @@ cd backend
 composer install --no-dev --prefer-dist --optimize-autoloader
 php artisan migrate --force
 php artisan optimize
+cp /var/www/pbxpro/deploy/freeswitch/xml_curl.conf.xml /etc/freeswitch/autoload_configs/xml_curl.conf.xml
+xml_token=$(sed -n 's/^FREESWITCH_XML_TOKEN=//p' /var/www/pbxpro/backend/.env)
+sed -i "s/CHANGE_ME_XML_TOKEN/$xml_token/g" /etc/freeswitch/autoload_configs/xml_curl.conf.xml
+unset xml_token
+chown freeswitch:freeswitch /etc/freeswitch/autoload_configs/xml_curl.conf.xml
+systemctl restart freeswitch
 systemctl restart php8.4-fpm pbxpro-queue pbxpro-reverb pbxpro-esl pbxpro-scheduler
 ```
 

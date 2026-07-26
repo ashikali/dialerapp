@@ -14,4 +14,5 @@ class Agent extends Model
     protected $fillable = ['tenant_id','user_id','employee_code','display_name','status'];
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function sessions(): HasMany { return $this->hasMany(AgentSession::class); }
+    public function queueMemberships(): HasMany { return $this->hasMany(QueueMember::class); }
 }

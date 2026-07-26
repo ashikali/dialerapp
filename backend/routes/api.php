@@ -5,6 +5,8 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExtensionController;
+use App\Http\Controllers\QueueController;
+use App\Http\Controllers\RingGroupController;
 use App\Http\Controllers\TenantController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +21,8 @@ Route::middleware(['auth:sanctum','tenant.active'])->group(function(){
         Route::post('/extensions/{extension}/reveal-password',[ExtensionController::class,'revealPassword'])->middleware('throttle:10,1');
         Route::apiResource('extensions',ExtensionController::class)->only(['index','store','update']);
         Route::apiResource('agents',AgentController::class)->only(['index','store']);
+        Route::apiResource('queues',QueueController::class)->only(['index','store','update']);
+        Route::apiResource('ring-groups',RingGroupController::class)->only(['index','store','update'])->parameters(['ring-groups'=>'ringGroup']);
     });
     Route::prefix('agent')->middleware('role:AGENT')->group(function(){ Route::post('/sessions',[AgentSessionController::class,'start']); Route::patch('/sessions/{session}/status',[AgentSessionController::class,'status']); Route::delete('/sessions/{session}',[AgentSessionController::class,'stop']); });
 });
