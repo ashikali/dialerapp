@@ -1,7 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 
-export type ApiUser = { id: string; tenant_id: string | null; name: string; email: string; role: 'SUPER_ADMIN'|'TENANT_ADMIN'|'AGENT' }
-export type TenantAdmin = { id: string; tenant_id: string; name: string; email: string; status: 'ACTIVE'|'INACTIVE' }
+export type ApiUser = { id: string; tenant_id: string | null; name: string; username: string | null; email: string; role: 'SUPER_ADMIN'|'TENANT_ADMIN'|'AGENT' }
+export type TenantAdmin = { id: string; tenant_id: string; name: string; username: string; email: string; status: 'ACTIVE'|'INACTIVE' }
 export type Tenant = {
   id: string
   name: string
@@ -33,7 +33,7 @@ export type TenantPayload = {
   max_concurrent_calls: number
   recording_retention_days: number
   features: string[]
-  admin: { name: string; email: string; password: string; password_confirmation: string }
+  admin: { name: string; username: string; email: string; password: string; password_confirmation: string }
 }
 export type DashboardSummary = { tenants: number; extensions: number; agents: number; active_calls: number; calls_today: number }
 export type Extension = {
@@ -74,6 +74,7 @@ export type AgentPayload = {
   name: string
   display_name: string
   employee_code: string
+  username: string
   email: string
   password: string
   password_confirmation: string
@@ -163,7 +164,7 @@ export const api = {
     if (!response.ok) throw new Error(`Unable to initialize secure session (${response.status})`)
   },
   me: () => request<{user: ApiUser}>('/api/v1/me'),
-  login: (email: string, password: string) => request<{user: ApiUser}>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({email,password}) }),
+  login: (login: string, password: string) => request<{user: ApiUser}>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({login,password}) }),
   logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
   dashboard: () => request<{data: DashboardSummary}>('/api/v1/dashboard'),
   tenants: () => request<Paginated<Tenant>>('/api/v1/tenants'),

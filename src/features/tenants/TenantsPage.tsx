@@ -6,7 +6,7 @@ const defaults: TenantPayload = {
   name: '', code: '', sip_domain: '', timezone: 'Asia/Kolkata', extension_start: 1000, extension_end: 1999,
   max_extensions: 100, max_agents: 50, max_queues: 10, max_concurrent_calls: 25,
   recording_retention_days: 90, features: [],
-  admin: { name: '', email: '', password: '', password_confirmation: '' },
+  admin: { name: '', username: 'admin', email: '', password: '', password_confirmation: '' },
 }
 
 export function TenantsPage() {
@@ -24,7 +24,7 @@ export function TenantsPage() {
   }
 
   useEffect(()=>{ void load() },[])
-  const filtered=useMemo(()=>tenants.filter(tenant=>`${tenant.name} ${tenant.code} ${tenant.sip_domain} ${tenant.users?.[0]?.email ?? ''}`.toLowerCase().includes(search.toLowerCase())),[tenants,search])
+  const filtered=useMemo(()=>tenants.filter(tenant=>`${tenant.name} ${tenant.code} ${tenant.sip_domain} ${tenant.users?.[0]?.username ?? ''} ${tenant.users?.[0]?.email ?? ''}`.toLowerCase().includes(search.toLowerCase())),[tenants,search])
 
   async function toggleStatus(tenant: Tenant) {
     const action=tenant.status === 'ACTIVE' ? 'suspend' : 'reactivate'
@@ -45,7 +45,7 @@ export function TenantsPage() {
       {loading ? <div className="empty-state">Loading tenants...</div> : filtered.length === 0 ? <div className="empty-state"><Building2 size={26}/><strong>No tenants found</strong><span>Onboard your first tenant to begin.</span></div> : filtered.map((tenant,i)=><div className="table-row" key={tenant.id}>
         <span><i className={`table-icon t${i%5}`}><Building2 size={16}/></i><strong>{tenant.name}</strong><small>{tenant.sip_domain}</small></span>
         <span><b className={tenant.status === 'ACTIVE' ? 'badge' : 'badge paused'}><CircleDot size={11}/>{tenant.status === 'ACTIVE' ? 'Active' : 'Suspended'}</b></span>
-        <span className="stacked-cell"><strong>{tenant.users?.[0]?.name ?? 'Not assigned'}</strong><small>{tenant.users?.[0]?.email ?? '—'}</small></span>
+        <span className="stacked-cell"><strong>{tenant.users?.[0]?.name ?? 'Not assigned'}</strong><small>{tenant.users?.[0] ? `${tenant.users[0].username}@${tenant.sip_domain}` : '—'}</small></span>
         <span className="stacked-cell"><strong>{tenant.max_agents} agents</strong><small>{tenant.extension_start}–{tenant.extension_end}</small></span>
         <span><button className={tenant.status === 'ACTIVE' ? 'table-action danger' : 'table-action'} onClick={()=>void toggleStatus(tenant)}>{tenant.status === 'ACTIVE' ? 'Suspend' : 'Reactivate'}</button></span>
       </div>)}
@@ -86,7 +86,8 @@ function TenantOnboardingModal({onClose,onCreated}:{onClose:()=>void;onCreated:(
       </div></fieldset>
       <fieldset><legend>Initial Tenant Admin</legend><div className="form-grid">
         <label>Administrator name<input required value={form.admin.name} onChange={event=>setAdmin('name',event.target.value)}/></label>
-        <label>Email address<input required type="email" autoComplete="off" value={form.admin.email} onChange={event=>setAdmin('email',event.target.value)}/></label>
+        <label>Login username<input required minLength={2} maxLength={64} pattern="[A-Za-z0-9][A-Za-z0-9._-]*" value={form.admin.username} onChange={event=>setAdmin('username',event.target.value.toLowerCase())} placeholder="admin"/></label>
+        <label className="wide">Contact email<input required type="email" autoComplete="off" value={form.admin.email} onChange={event=>setAdmin('email',event.target.value)}/></label>
         <label>Password<input required minLength={12} type="password" autoComplete="new-password" value={form.admin.password} onChange={event=>setAdmin('password',event.target.value)}/></label>
         <label>Confirm password<input required minLength={12} type="password" autoComplete="new-password" value={form.admin.password_confirmation} onChange={event=>setAdmin('password_confirmation',event.target.value)}/></label>
       </div></fieldset>

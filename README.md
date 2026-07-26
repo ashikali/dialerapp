@@ -8,6 +8,7 @@ This repository implements the first production slice:
 
 - Responsive Super Admin, Tenant Admin, and Agent interfaces
 - Sanctum session authentication with role-locked production UI
+- Tenant-domain-scoped usernames with separate contact email addresses and backward-compatible email login
 - Transactional Super Admin onboarding that creates a tenant and its initial Tenant Admin together
 - Database-backed tenant list, tenant suspension/reactivation, live dashboard counts, and sign-out
 - Tenant Admin extension provisioning/editing with range/capacity enforcement, generated credentials, and encrypted SIP secrets
@@ -423,7 +424,7 @@ Do not expose PostgreSQL `5432`, Redis `6379`, PHP-FPM, Reverb `8080`, or ESL `8
 
 1. Open `https://pbxpro.test` and sign in as the seeded Super Admin.
 2. Open **Tenants** and select **Onboard tenant**.
-3. Create tenant `ABC Finance` with code `abcfinance`, SIP domain `abcfinance.pbxpro.test`, extension range `1000–1999`, capacity limits, and its initial Tenant Admin credentials.
+3. Create tenant `ABC Finance` with code `abcfinance`, SIP domain `abcfinance.pbxpro.test`, extension range `1000–1999`, capacity limits, and its initial Tenant Admin credentials. Use a short login username such as `admin` and a separate real contact email.
 4. Submit the form. Tenant and administrator creation is one database transaction; validation failure creates neither record.
 5. Use the top-bar sign-out button, then sign in with the new Tenant Admin account.
 
@@ -435,6 +436,8 @@ Do not expose PostgreSQL `5432`, Redis `6379`, PHP-FPM, Reverb `8080`, or ESL `8
 4. Verify that the Extensions screen shows the assigned user and that the Agents screen shows the assigned extension.
 5. Open **Ring Groups**, create a destination such as `6000`, select simultaneous or sequential ringing, and add extensions `1001` and `1002`.
 6. Open **Queues**, create a destination such as `7000`, select a strategy, and add agents that have active extensions.
+
+Tenant logins are scoped by the domain in the browser URL. At `https://abcfinance.pbxpro.test`, the administrator can sign in as `admin`; `admin@abcfinance.pbxpro.test` is accepted as an equivalent domain-qualified login. The separately stored contact email also remains accepted for backward compatibility and future notifications or password recovery. Super Admin users sign in with their contact email on the platform domain `https://pbxpro.test`.
 
 SIP passwords are encrypted at rest and excluded from normal extension API responses. A Tenant Admin can reveal an individual password from the extension editor; each reveal is rate-limited, returned with no-store headers, and recorded in the audit log. Editing an extension keeps the existing secret by default; use **Generate new SIP password** only when intentionally rotating device credentials.
 

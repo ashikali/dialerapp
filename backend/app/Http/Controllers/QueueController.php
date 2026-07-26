@@ -131,6 +131,6 @@ class QueueController extends Controller
 
     private function relations(): array
     {
-        return ['members.agent.user:id,name,email','members.agent.user.extensions'=>fn($query)=>$query->select(['id','user_id','extension_number','status','ring_timeout'])->where('status','ACTIVE')];
+        return ['members.agent.user:id,name,username,email','members.agent.user.extensions'=>fn($query)=>$query->select(['id','user_id','extension_number','status','ring_timeout'])->where('status','ACTIVE')];
     }
 }

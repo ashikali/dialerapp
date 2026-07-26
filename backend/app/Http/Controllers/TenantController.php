@@ -19,7 +19,7 @@ class TenantController extends Controller
             ->withCount('users')
             ->with(['users' => fn ($query) => $query
                 ->where('role', UserRole::TENANT_ADMIN)
-                ->select(['id','tenant_id','name','email','status'])])
+                ->select(['id','tenant_id','name','username','email','status'])])
             ->latest()
             ->paginate(25);
 
@@ -28,6 +28,11 @@ class TenantController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $adminInput=(array)$request->input('admin',[]);
+        $request->merge(['admin'=>[
+            ...$adminInput,
+            'username'=>strtolower((string)($adminInput['username']??'')),
+        ]]);
         $data=$request->validate([
             'name'=>['required','string','max:150'],
             'code'=>['required','alpha_dash','max:50','unique:tenants,code'],
@@ -42,6 +47,7 @@ class TenantController extends Controller
             'recording_retention_days'=>['required','integer','between:1,3650'],
             'features'=>['sometimes','array'],
             'admin.name'=>['required','string','max:255'],
+            'admin.username'=>['required','string','min:2','max:64','regex:/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/'],
             'admin.email'=>['required','email:rfc','max:255','unique:users,email'],
             'admin.password'=>['required','string','max:128','confirmed',Password::min(12)->mixedCase()->numbers()->symbols()],
         ]);
@@ -52,6 +58,7 @@ class TenantController extends Controller
             User::create([
                 'tenant_id'=>$tenant->id,
                 'name'=>$admin['name'],
+                'username'=>$admin['username'],
                 'email'=>$admin['email'],
                 'password'=>$admin['password'],
                 'role'=>UserRole::TENANT_ADMIN,

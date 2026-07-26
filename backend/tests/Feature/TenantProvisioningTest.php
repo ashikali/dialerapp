@@ -98,7 +98,7 @@ class TenantProvisioningTest extends TestCase
         $extension=Extension::create($this->extensionRecord($tenant,'1001'));
 
         $response=$this->actingAs($admin)->postJson('/api/v1/agents', [
-            'name'=>'John Smith','display_name'=>'John','employee_code'=>'AGT-1001','email'=>'john@alpha.test',
+            'name'=>'John Smith','display_name'=>'John','employee_code'=>'AGT-1001','username'=>'john','email'=>'john@alpha.test',
             'password'=>'StrongAgentPassword-1001','password_confirmation'=>'StrongAgentPassword-1001','extension_id'=>$extension->id,
         ]);
 
@@ -107,6 +107,7 @@ class TenantProvisioningTest extends TestCase
             ->assertJsonPath('data.user.extensions.0.extension_number', '1001');
 
         $user=User::where('email','john@alpha.test')->firstOrFail();
+        $this->assertSame('john',$user->username);
         $this->assertSame(UserRole::AGENT,$user->role);
         $this->assertSame($tenant->id,$user->tenant_id);
         $this->assertTrue(Hash::check('StrongAgentPassword-1001',$user->password));
@@ -121,7 +122,7 @@ class TenantProvisioningTest extends TestCase
         $extension=Extension::withoutEvents(fn()=>Extension::forceCreate($this->extensionRecord($beta,'1001')));
 
         $this->actingAs($admin)->postJson('/api/v1/agents', [
-            'name'=>'John Smith','display_name'=>'John','employee_code'=>'AGT-1001','email'=>'john@alpha.test',
+            'name'=>'John Smith','display_name'=>'John','employee_code'=>'AGT-1001','username'=>'john','email'=>'john@alpha.test',
             'password'=>'StrongAgentPassword-1001','password_confirmation'=>'StrongAgentPassword-1001','extension_id'=>$extension->id,
         ])->assertUnprocessable()->assertJsonValidationErrors('extension_id');
 

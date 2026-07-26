@@ -18,7 +18,7 @@ class AgentController extends Controller
     public function index(): JsonResponse
     {
         return response()->json(Agent::query()
-            ->with(['user:id,tenant_id,name,email,status', 'user.extensions:id,user_id,extension_number,status'])
+            ->with(['user:id,tenant_id,name,username,email,status', 'user.extensions:id,user_id,extension_number,status'])
             ->orderBy('display_name')
             ->paginate(50));
     }
@@ -27,10 +27,12 @@ class AgentController extends Controller
     {
         $tenant=$request->user()->tenant;
         $tenantId=$tenant->id;
+        $request->merge(['username'=>strtolower((string)$request->input('username'))]);
         $data=$request->validate([
             'name'=>['required','string','max:255'],
             'display_name'=>['required','string','max:255'],
             'employee_code'=>['required','alpha_dash','max:50',Rule::unique('agents')->where('tenant_id',$tenantId)],
+            'username'=>['required','string','min:2','max:64','regex:/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/',Rule::unique('users')->where('tenant_id',$tenantId)],
             'email'=>['required','email','max:255','unique:users,email'],
             'password'=>['required','confirmed',Password::min(12)->letters()->mixedCase()->numbers()],
             'extension_id'=>['nullable','uuid',Rule::exists('extensions','id')->where('tenant_id',$tenantId)],
@@ -51,6 +53,7 @@ class AgentController extends Controller
             $user=User::create([
                 'tenant_id'=>$tenantId,
                 'name'=>$data['name'],
+                'username'=>$data['username'],
                 'email'=>$data['email'],
                 'password'=>$data['password'],
                 'role'=>UserRole::AGENT,

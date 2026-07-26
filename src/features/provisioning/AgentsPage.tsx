@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CircleDot, Plus, Search, UsersRound, X } from 'lucide-react'
 import { api, type Agent, type AgentPayload, type Extension } from '../../lib/api'
 
-const emptyForm: AgentPayload = { name:'',display_name:'',employee_code:'',email:'',password:'',password_confirmation:'',extension_id:null }
+const emptyForm: AgentPayload = { name:'',display_name:'',employee_code:'',username:'',email:'',password:'',password_confirmation:'',extension_id:null }
 
 export function AgentsPage() {
   const [agents,setAgents]=useState<Agent[]>([])
@@ -18,7 +18,7 @@ export function AgentsPage() {
     catch (err) { setError(err instanceof Error ? err.message : 'Unable to load agents') }
     finally { setLoading(false) }
   }
-  const filtered=useMemo(()=>agents.filter(item=>`${item.display_name} ${item.employee_code} ${item.user.email}`.toLowerCase().includes(search.toLowerCase())),[agents,search])
+  const filtered=useMemo(()=>agents.filter(item=>`${item.display_name} ${item.employee_code} ${item.user.username} ${item.user.email}`.toLowerCase().includes(search.toLowerCase())),[agents,search])
   return <div className="generic-page provisioning-page">
     <div className="generic-toolbar"><label className="search"><Search size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Search agents..."/></label><button className="primary-button" onClick={()=>setShowForm(true)}><Plus size={17}/> Add agent</button></div>
     {error && <div className="page-alert error">{error}</div>}
@@ -26,7 +26,7 @@ export function AgentsPage() {
       {loading ? <div className="empty-state">Loading agents...</div> : filtered.length === 0 ? <div className="empty-state"><UsersRound size={26}/><strong>No agents provisioned</strong><span>Create an agent login and assign an available extension.</span></div> : filtered.map(item=><div className="table-row" key={item.id}>
         <span><i className="table-icon"><UsersRound size={16}/></i><strong>{item.display_name}</strong><small>{item.user.name}</small></span>
         <span><b className="badge"><CircleDot size={11}/>{item.status === 'ACTIVE' ? 'Active' : 'Inactive'}</b></span>
-        <span className="stacked-cell"><strong>{item.user.email}</strong><small>Agent portal</small></span>
+        <span className="stacked-cell"><strong>{item.user.username}</strong><small>{item.user.email}</small></span>
         <span className="stacked-cell"><strong>{item.user.extensions?.[0]?.extension_number ?? 'Unassigned'}</strong><small>{item.user.extensions?.[0] ? 'Ready for device setup' : 'Assign later'}</small></span>
         <span>{item.employee_code}</span>
       </div>)}
@@ -52,7 +52,8 @@ function AgentModal({extensions,onClose,onCreated}:{extensions:Extension[];onClo
       <label>Display name<input required value={form.display_name} onChange={event=>setForm({...form,display_name:event.target.value})}/></label>
       <label>Employee code<input required value={form.employee_code} onChange={event=>setForm({...form,employee_code:event.target.value})} placeholder="AGT-1001"/></label>
       <label>Extension<select value={form.extension_id ?? ''} onChange={event=>setForm({...form,extension_id:event.target.value||null})}><option value="">Assign later</option>{extensions.map(item=><option value={item.id} key={item.id}>{item.extension_number} — {item.caller_id_name}</option>)}</select></label>
-      <label className="wide">Login email<input required type="email" value={form.email} onChange={event=>setForm({...form,email:event.target.value})} placeholder="john@abcfinance.test"/></label>
+      <label>Login username<input required minLength={2} maxLength={64} pattern="[A-Za-z0-9][A-Za-z0-9._-]*" value={form.username} onChange={event=>setForm({...form,username:event.target.value.toLowerCase()})} placeholder="john"/></label>
+      <label>Contact email<input required type="email" value={form.email} onChange={event=>setForm({...form,email:event.target.value})} placeholder="john@company.com"/></label>
       <label>Password<input required minLength={12} type="password" value={form.password} onChange={event=>setForm({...form,password:event.target.value})} placeholder="12+ characters"/></label>
       <label>Confirm password<input required minLength={12} type="password" value={form.password_confirmation} onChange={event=>setForm({...form,password_confirmation:event.target.value})}/></label>
     </div></fieldset><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={saving}>{saving ? 'Creating...' : 'Create agent'}</button></div></form>

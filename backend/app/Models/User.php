@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, HasUuids, Notifiable;
-    protected $fillable = ['tenant_id','name','email','password','role','status'];
+    protected $fillable = ['tenant_id','name','username','email','password','role','status'];
     protected $hidden = ['password','remember_token'];
     protected function casts(): array { return ['password'=>'hashed','role'=>UserRole::class,'email_verified_at'=>'datetime']; }
     public function isSuperAdmin(): bool { return $this->role === UserRole::SUPER_ADMIN; }

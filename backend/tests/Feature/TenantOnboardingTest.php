@@ -20,6 +20,7 @@ class TenantOnboardingTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('data.name', 'ABC Finance')
             ->assertJsonPath('data.status', 'ACTIVE')
+            ->assertJsonPath('data.users.0.username', 'admin')
             ->assertJsonPath('data.users.0.email', 'admin@abcfinance.test');
 
         $tenant=Tenant::where('code', 'abc-finance')->firstOrFail();
@@ -80,7 +81,7 @@ class TenantOnboardingTest extends TestCase
             'extension_start'=>1000,'extension_end'=>1999,'max_extensions'=>100,'max_agents'=>50,'max_queues'=>10,
             'max_concurrent_calls'=>25,'recording_retention_days'=>90,'features'=>[],
             'admin'=>[
-                'name'=>'ABC Administrator','email'=>'admin@abcfinance.test','password'=>'StrongPassword-2026!',
+                'name'=>'ABC Administrator','username'=>'admin','email'=>'admin@abcfinance.test','password'=>'StrongPassword-2026!',
                 'password_confirmation'=>'StrongPassword-2026!',
             ],
         ];

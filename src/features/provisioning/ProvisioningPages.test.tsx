@@ -9,7 +9,7 @@ const extension: Extension = {
 }
 const agent: Agent = {
   id:'agent-1',employee_code:'AGT-1001',display_name:'John',status:'ACTIVE',created_at:'2026-07-22T00:00:00Z',
-  user:{id:'user-1',tenant_id:'tenant-1',name:'John Smith',email:'john@abcfinance.test',role:'AGENT',status:'ACTIVE',extensions:[{...extension,user_id:'user-1'}]},
+  user:{id:'user-1',tenant_id:'tenant-1',name:'John Smith',username:'john',email:'john@abcfinance.test',role:'AGENT',status:'ACTIVE',extensions:[{...extension,user_id:'user-1'}]},
 }
 const queue:PbxQueue={
   id:'queue-1',name:'Support',number:'6000',strategy:'longest-idle-agent',wrap_up_seconds:30,max_wait_seconds:300,max_size:100,
@@ -63,7 +63,8 @@ describe('Tenant Admin provisioning',()=>{
     vi.spyOn(api,'extensions').mockResolvedValue({data:[extension],current_page:1,last_page:1,total:1})
     render(<App lockedRole="tenant"/>)
     fireEvent.click(screen.getByRole('button',{name:'Agents'}))
-    expect(await screen.findByText('john@abcfinance.test')).toBeInTheDocument()
+    expect(await screen.findByText('john')).toBeInTheDocument()
+    expect(screen.getByText('john@abcfinance.test')).toBeInTheDocument()
     expect(screen.getByText('Ready for device setup')).toBeInTheDocument()
   })
 
