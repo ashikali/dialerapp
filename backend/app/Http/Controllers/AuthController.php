@@ -14,6 +14,9 @@ class AuthController extends Controller
 {
     public function login(Request $request): JsonResponse
     {
+        $request->merge([
+            'login'=>$request->input('login',$request->input('email')),
+        ]);
         $credentials=$request->validate([
             'login'=>['required','string','max:255'],
             'password'=>['required','string'],
