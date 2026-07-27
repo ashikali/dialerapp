@@ -32,11 +32,7 @@ const superNav: NavItem[] = [
 const tenantNav: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard }, { label: 'Agents', icon: UsersRound },
   { label: 'Extensions', icon: Phone }, { label: 'Queues', icon: Headphones },
-  { label: 'Ring Groups', icon: Users }, { label: 'IVR Flows', icon: Network },
-  { label: 'DIDs', icon: PhoneIncoming }, { label: 'Trunks & Routes', icon: Radio },
-  { label: 'Campaigns', icon: PhoneOutgoing }, { label: 'Contacts', icon: ContactRound },
-  { label: 'Dispositions', icon: ListChecks }, { label: 'Recordings', icon: FileAudio },
-  { label: 'Reports', icon: Activity }, { label: 'Tenant Settings', icon: Settings },
+  { label: 'Ring Groups', icon: Users }, { label: 'Reports', icon: Activity },
 ]
 const agentNav: NavItem[] = [
   { label: 'Workspace', icon: Grid2X2 }, { label: 'My Campaigns', icon: PhoneOutgoing },
